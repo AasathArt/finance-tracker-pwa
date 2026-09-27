@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Finance Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1c1c1e">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+:root {
+  --bg: #f4f5f7;
+  --card-bg: #ffffff;
+  --text: #1c1c1e;
+  --muted: #777777;
+  --border: #cccccc;
+  --in: #2e7d32;
+  --out: #c62828;
+  --accent: #1c1c1e;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121214; --card-bg: #1e1e21; --text: #f0f0f0; --muted: #999999; --border: #3a3a3d; --accent: #f0f0f0;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121214; --card-bg: #1e1e21; --text: #f0f0f0; --muted: #999999; --border: #3a3a3d; --accent: #f0f0f0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+.app { max-width: 760px; margin: 0 auto; padding: 20px; }
+header { text-align: center; margin-bottom: 20px; }
+header h1 { font-size: 1.6rem; }
+.subtitle { color: var(--muted); font-size: 0.9rem; }
+
+.balance-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+.balance-card span { font-size: 0.85rem; color: var(--muted); }
+.balance-card strong { display: block; font-size: 2rem; margin-top: 4px; }
+
+.section-title { font-size: 1.05rem; margin: 18px 0 10px; display: flex; justify-content: space-between; align-items: center; }
+.section-title button { font-size: 0.8rem; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer; }
+
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 12px; }
+
+.cat-card {
+  background: var(--card-bg);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-left: 4px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cat-card.flow-in { border-left-color: var(--in); }
+.cat-card.flow-out { border-left-color: var(--out); }
+
+.cat-header { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.cat-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  outline: none;
+  width: 100%;
+  border-bottom: 1px dashed transparent;
+}
+.cat-name:focus { border-bottom: 1px dashed var(--border); }
+.cat-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; flex-shrink: 0; }
+
+.cat-balance { font-size: 1.4rem; font-weight: 700; }
+.cat-card.flow-in .cat-balance { color: var(--in); }
+.cat-card.flow-out .cat-balance { color: var(--out); }
+
+.cat-actions { display: flex; gap: 6px; }
+.cat-actions input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.cat-actions button {
+  width: 34px;
+  border-radius: 8px;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+.btn-plus { background: var(--in); color: #fff; }
+.btn-minus { background: var(--out); color: #fff; }
+
+.add-cat-card {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+.add-cat-card input, .add-cat-card select {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.add-cat-card button {
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: var(--bg);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.log-section { margin-top: 26px; }
+#log { list-style: none; display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+#log li {
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+#log .log-meta { color: var(--muted); font-size: 0.75rem; }
+#log .pos { color: var(--in); font-weight: 700; }
+#log .neg { color: var(--out); font-weight: 700; }
+.empty-msg { text-align: center; color: var(--muted); padding: 16px; font-size: 0.85rem; }
+
+.footer-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.footer-actions button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.footer-actions button.danger { background: var(--out); color: #fff; border: none; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Finance Tracker</h1>
+      <p class="subtitle">Track it or you're guessing.</p>
+    </header>
+
+    <div class="balance-card">
+      <span>Available Balance (Money In − Money Out)</span>
+      <strong id="availableBalance">0.00</strong>
+    </div>
+
+    <div class="section-title"><span>Your Categories</span></div>
+    <div class="cat-grid" id="catGrid"></div>
+
+    <div class="log-section">
+      <div class="section-title">
+        <span>Activity Log</span>
+        <div>
+          <button id="exportBtn">Export JSON</button>
+        </div>
+      </div>
+      <ul id="log"></ul>
+    </div>
+
+    <div class="footer-actions">
+      <button id="clearLogBtn">Clear Log Only</button>
+      <button id="resetAllBtn" class="danger">Reset Everything</button>
+    </div>
+  </div>
+
+<script>
+let categories = [];
+let log = [];
+
+const catGrid = document.getElementById('catGrid');
+const logEl = document.getElementById('log');
+
+function defaultCategories() {
+  return [
+    { id: 'income',    name: 'Income',          flow: 'in',  balance: 0 },
+    { id: 'expense',   name: 'Expenses',        flow: 'out', balance: 0 },
+    { id: 'savings',   name: 'Savings',         flow: 'out', balance: 0 },
+    { id: 'emergency', name: 'Emergency Fund',  flow: 'out', balance: 0 }
+  ];
+}
+
+function load() {
+  try {
+    const c = localStorage.getItem('ft_categories');
+    const l = localStorage.getItem('ft_log');
+    categories = c ? JSON.parse(c) : defaultCategories();
+    log = l ? JSON.parse(l) : [];
+  } catch (e) {
+    categories = defaultCategories();
+    log = [];
+  }
+}
+
+function save() {
+  try {
+    localStorage.setItem('ft_categories', JSON.stringify(categories));
+    localStorage.setItem('ft_log', JSON.stringify(log));
+  } catch (e) { /* storage unavailable, continue in-memory */ }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function calcAvailable() {
+  let inSum = 0, outSum = 0;
+  categories.forEach(c => {
+    if (c.flow === 'in') inSum += c.balance;
+    else outSum += c.balance;
+  });
+  return inSum - outSum;
+}
+
+function render() {
+  document.getElementById('availableBalance').textContent = calcAvailable().toFixed(2);
+
+  catGrid.innerHTML = '';
+  categories.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'cat-card flow-' + c.flow;
+    card.dataset.id = c.id;
+    card.innerHTML = `
+      <div class="cat-header">
+        <input class="cat-name" value="${escapeHtml(c.name)}" data-id="${c.id}">
+        <button class="cat-del" data-id="${c.id}" title="Delete category">✕</button>
+      </div>
+      <div class="cat-balance">${c.balance.toFixed(2)}</div>
+      <div class="cat-actions">
+        <input type="number" class="cat-amount" placeholder="Amount" min="0" step="0.01" data-id="${c.id}">
+        <button class="btn-plus" data-id="${c.id}">+</button>
+        <button class="btn-minus" data-id="${c.id}">−</button>
+      </div>
+    `;
+    catGrid.appendChild(card);
+  });
+
+  const addCard = document.createElement('div');
+  addCard.className = 'add-cat-card';
+  addCard.innerHTML = `
+    <input type="text" id="newCatName" placeholder="New category name">
+    <select id="newCatFlow">
+      <option value="out">Money Out (like expenses)</option>
+      <option value="in">Money In (like income)</option>
+    </select>
+    <button id="addCatBtn">+ Add Category</button>
+  `;
+  catGrid.appendChild(addCard);
+
+  logEl.innerHTML = '';
+  if (log.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'empty-msg';
+    li.textContent = 'No activity yet.';
+    li.style.background = 'transparent';
+    li.style.boxShadow = 'none';
+    logEl.appendChild(li);
+  } else {
+    log.slice().reverse().forEach(entry => {
+      const li = document.createElement('li');
+      const sign = entry.delta >= 0 ? '+' : '−';
+      const cls = entry.delta >= 0 ? 'pos' : 'neg';
+      li.innerHTML = `
+        <span>${escapeHtml(entry.catName)}${entry.note ? ' • ' + escapeHtml(entry.note) : ''}
+          <span class="log-meta">${entry.date}</span>
+        </span>
+        <span class="${cls}">${sign}${Math.abs(entry.delta).toFixed(2)}</span>
+      `;
+      logEl.appendChild(li);
+    });
+  }
+}
+
+function adjustCategory(id, delta) {
+  const cat = categories.find(c => c.id === id);
+  if (!cat) return;
+  cat.balance += delta;
+  log.push({
+    catName: cat.name,
+    delta: delta,
+    date: new Date().toISOString().slice(0, 10)
+  });
+  save();
+  render();
+}
+
+catGrid.addEventListener('click', e => {
+  const id = e.target.dataset.id;
+  if (e.target.classList.contains('btn-plus') || e.target.classList.contains('btn-minus')) {
+    const card = e.target.closest('.cat-card');
+    const input = card.querySelector('.cat-amount');
+    const amount = parseFloat(input.value);
+    if (isNaN(amount) || amount <= 0) { input.focus(); return; }
+    adjustCategory(id, e.target.classList.contains('btn-plus') ? amount : -amount);
+    input.value = '';
+    return;
+  }
+  if (e.target.classList.contains('cat-del')) {
+    if (confirm('Delete this category and its balance?')) {
+      categories = categories.filter(c => c.id !== id);
+      save();
+      render();
+    }
+    return;
+  }
+  if (e.target.id === 'addCatBtn') {
+    const nameInput = document.getElementById('newCatName');
+    const flowSelect = document.getElementById('newCatFlow');
+    const name = nameInput.value.trim();
+    if (!name) { nameInput.focus(); return; }
+    categories.push({
+      id: 'c' + Date.now(),
+      name: name,
+      flow: flowSelect.value,
+      balance: 0
+    });
+    save();
+    render();
+  }
+});
+
+catGrid.addEventListener('change', e => {
+  if (e.target.classList.contains('cat-name')) {
+    const id = e.target.dataset.id;
+    const cat = categories.find(c => c.id === id);
+    if (cat) {
+      const newName = e.target.value.trim();
+      cat.name = newName || cat.name;
+      save();
+      render();
+    }
+  }
+});
+
+catGrid.addEventListener('keydown', e => {
+  if (e.target.classList.contains('cat-amount') && e.key === 'Enter') {
+    const card = e.target.closest('.cat-card');
+    card.querySelector('.btn-plus').click();
+  }
+  if (e.target.classList.contains('cat-name') && e.key === 'Enter') {
+    e.target.blur();
+  }
+  if (e.target.id === 'newCatName' && e.key === 'Enter') {
+    document.getElementById('addCatBtn').click();
+  }
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const data = { categories, log };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'finance-data.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('clearLogBtn').addEventListener('click', () => {
+  if (confirm('Clear activity log? Category balances stay as-is.')) {
+    log = [];
+    save();
+    render();
+  }
+});
+
+document.getElementById('resetAllBtn').addEventListener('click', () => {
+  if (confirm('Reset everything — categories and log — back to defaults?')) {
+    categories = defaultCategories();
+    log = [];
+    save();
+    render();
+  }
+});
+
+load();
+render();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
